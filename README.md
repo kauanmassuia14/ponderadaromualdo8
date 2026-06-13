@@ -1,112 +1,75 @@
-# Ponderada — Provisionamento de Infraestrutura AWS com Terraform (IaC)
+# Ponderada 8 — Terraform + AWS (IaC)
 
-**Aluno:** Kauan Massuia
-**Disciplina:** Módulo 8 — Prof. Romualdo
-**Tutorial base:** [HashiCorp — Create Infrastructure](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-create)
+**Kauan Massuia** — Módulo 8, Prof. Romualdo
 
----
+Essa ponderada segue o tutorial [Create Infrastructure](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-create) da HashiCorp, onde a gente provisiona uma instância EC2 na AWS usando Terraform como Infraestrutura como Código.
 
-## 📋 Sumário
-
-1. [Objetivo](#-objetivo)
-2. [Por que LocalStack ao invés da AWS?](#-por-que-localstack-ao-invés-da-aws)
-3. [O que é IaC e Terraform?](#-o-que-é-iac-e-terraform)
-4. [Tecnologias Utilizadas](#-tecnologias-utilizadas)
-5. [Pré-requisitos](#-pré-requisitos)
-6. [Estrutura do Projeto](#-estrutura-do-projeto)
-7. [Passo a Passo Completo](#-passo-a-passo-completo)
-8. [Recursos Provisionados](#-recursos-provisionados-na-nuvem)
-9. [Destruição da Infraestrutura](#-destruição-da-infraestrutura)
-10. [Código para AWS Real vs LocalStack](#-código-para-aws-real-vs-localstack)
-11. [Referências](#-referências)
+Como não consegui usar a AWS diretamente (explico mais abaixo), rodei tudo localmente com o **LocalStack**, que simula os serviços da AWS no Docker. O código Terraform é o mesmo — só muda o endpoint.
 
 ---
 
-## 🎯 Objetivo
+## Sumário
 
-Seguir o tutorial oficial da HashiCorp **"Create Infrastructure"** para provisionar uma instância **EC2** (máquina virtual) na AWS utilizando **Terraform** como ferramenta de **Infraestrutura como Código (IaC)**.
-
-A execução prática foi realizada com o **LocalStack** — emulador local dos serviços AWS via Docker — conforme justificado na seção abaixo.
-
----
-
-## ⚠️ Por que LocalStack ao invés da AWS?
-
-Durante a tentativa de seguir o tutorial utilizando a AWS real, enfrentei os seguintes problemas:
-
-### Problema 1 — Conta AWS pessoal incompleta
-Ao criar uma conta pessoal na AWS, o processo exige **validação de cartão de crédito internacional**. A AWS cobra uma taxa temporária de ~$1 USD para verificar o cartão. Não consegui completar essa etapa de validação, e a tela de cadastro ficou travada em `portal.aws.amazon.com/billing/signup/incomplete` com a mensagem **"Complete your account setup"**.
-
-### Problema 2 — AWS Academy inacessível
-A faculdade disponibiliza o **AWS Academy Learner Lab** (ambiente gratuito para alunos). Porém, ao tentar acessar, não consegui recuperar a senha da conta — o e-mail de redefinição simplesmente não chegava, impossibilitando o login e o acesso ao laboratório.
-
-### Solução adotada — LocalStack
-O **LocalStack** é uma ferramenta open-source amplamente utilizada no mercado de DevOps e SRE que emula os serviços da AWS localmente via Docker. Com ele:
-
-- O fluxo do Terraform é **idêntico** ao da AWS real (mesmos comandos, mesmos outputs)
-- Não é necessário cartão de crédito, conta AWS ou credenciais reais
-- É usado em produção por empresas para testes de infraestrutura antes de aplicar na nuvem real
-- O código Terraform é **100% compatível** — basta trocar os endpoints para migrar para a AWS real
-
-> **Nota:** O arquivo `main_aws.tf.example` neste repositório contém a versão exata do código para uso com a AWS real, incluindo o bloco `data "aws_ami"` do tutorial original.
+1. [O que rolou com a AWS](#o-que-rolou-com-a-aws)
+2. [Ferramentas usadas](#ferramentas-usadas)
+3. [Estrutura do repositório](#estrutura-do-repositório)
+4. [Passo a passo](#passo-a-passo)
+5. [Recursos provisionados](#recursos-provisionados)
+6. [Destruindo a infra](#destruindo-a-infra)
+7. [Diferença entre o código local e o da AWS real](#diferença-entre-o-código-local-e-o-da-aws-real)
+8. [Referências](#referências)
 
 ---
 
-## 💡 O que é IaC e Terraform?
+## O que rolou com a AWS
 
-**Infraestrutura como Código (IaC)** é a prática de gerenciar servidores, redes e bancos de dados por meio de arquivos de configuração declarativos, ao invés de processos manuais em painéis web.
+Antes de mais nada, preciso explicar por que estou usando o LocalStack ao invés da AWS de verdade. Tentei de duas formas e não deu certo em nenhuma:
 
-| Benefício | Descrição |
-|---|---|
-| **Reprodutibilidade** | O mesmo código gera o mesmo ambiente toda vez |
-| **Versionamento** | A infra fica no Git com histórico de mudanças |
-| **Automação** | Reduz erros humanos e acelera deploys |
-| **Documentação viva** | O código *é* a documentação |
+**Tentativa 1 — Criar conta pessoal na AWS:**
+Fui criar uma conta na AWS do zero, mas na hora de validar o cadastro a AWS pede um cartão de crédito internacional. Fiz o cadastro inteiro, mas a verificação do cartão não completou e a página ficou travada em `portal.aws.amazon.com/billing/signup/incomplete` com a mensagem "Complete your account setup". Sem a validação do cartão, a conta fica bloqueada e não dá pra usar nenhum serviço.
 
-O **Terraform** da HashiCorp utiliza a linguagem **HCL** e suporta centenas de provedores (AWS, Azure, GCP). Ele funciona em 3 etapas: `init` → `plan` → `apply`.
+**Tentativa 2 — AWS Academy da faculdade:**
+A faculdade disponibiliza o AWS Academy Learner Lab, que é um ambiente gratuito pra alunos. O problema é que eu esqueci a senha e tentei redefinir, mas o e-mail de recuperação simplesmente nunca chegou. Tentei várias vezes e nada.
+
+**A solução — LocalStack:**
+O LocalStack é uma ferramenta open-source que roda no Docker e simula os serviços da AWS localmente. É bastante usado no mercado pra testes de infraestrutura antes de aplicar na nuvem de verdade. O fluxo do Terraform funciona igualzinho — mesmos comandos, mesmas saídas. A única diferença é que as chamadas de API vão pra `localhost:4566` ao invés dos servidores da AWS.
+
+No repositório tem o arquivo `main_aws.tf.example` com o código original do tutorial pra quem quiser rodar na AWS real.
 
 ---
 
-## 🛠 Tecnologias Utilizadas
+## Ferramentas usadas
 
-| Tecnologia | Versão | Propósito |
+| Ferramenta | Versão | Pra quê |
 |---|---|---|
-| **Terraform** | v1.9.5 | Ferramenta de IaC |
-| **AWS Provider** | v5.100.0 | Plugin para APIs da AWS |
-| **LocalStack** | v3.4.0 (Community) | Emulador local da AWS via Docker |
-| **Docker** | - | Container runtime para o LocalStack |
-| **Git/GitHub** | - | Versionamento do código |
+| Terraform | v1.9.5 | Provisionar a infra via código |
+| AWS Provider | v5.100.0 | Plugin que conecta o Terraform nas APIs da AWS |
+| LocalStack | v3.4.0 | Emular a AWS localmente |
+| Docker | — | Rodar o container do LocalStack |
+| Git/GitHub | — | Versionar o código |
 
 ---
 
-## 📦 Pré-requisitos
-
-1. **Terraform CLI** (v1.2+) — [Instalação](https://developer.hashicorp.com/terraform/install)
-2. **Docker** — [Instalação](https://docs.docker.com/get-docker/)
-3. **Git** — [Instalação](https://git-scm.com/)
-
----
-
-## 📁 Estrutura do Projeto
+## Estrutura do repositório
 
 ```
 ponderadaromualdo8/
-├── .gitignore               # Ignora .tfstate, .terraform/, .env
-├── .terraform.lock.hcl      # Lock file com versão exata do provider
-├── terraform.tf             # Bloco terraform{} — providers e versão
-├── main.tf                  # Provider AWS (LocalStack) + recurso EC2
-├── main_aws.tf.example      # Versão original do tutorial (AWS real)
-├── docker-compose.yml       # Compose para subir o LocalStack
-└── README.md                # Documentação (este arquivo)
+├── .gitignore               # Ignora arquivos sensíveis (.tfstate, .env)
+├── .terraform.lock.hcl      # Versão exata do provider instalado
+├── terraform.tf             # Configuração do Terraform (providers, versão)
+├── main.tf                  # Provider AWS + recurso EC2 (versão LocalStack)
+├── main_aws.tf.example      # Versão original do tutorial pra AWS real
+├── docker-compose.yml       # Compose pra subir o LocalStack
+└── README.md                # Documentação (esse arquivo)
 ```
 
 ---
 
-## 🚀 Passo a Passo Completo
+## Passo a passo
 
-### Passo 1 — Criar o diretório do projeto
+### 1. Criar o diretório do projeto
 
-Conforme o tutorial, o primeiro passo é criar um diretório dedicado para os arquivos `.tf`:
+O Terraform carrega todos os `.tf` do diretório atual automaticamente, então cada projeto precisa do seu próprio diretório.
 
 ```bash
 $ mkdir ponderadaromualdo8
@@ -114,13 +77,11 @@ $ cd ponderadaromualdo8
 $ git init
 ```
 
-> **Propósito:** O Terraform carrega automaticamente todos os arquivos `.tf` do diretório atual, por isso cada projeto deve ter seu próprio diretório.
-
 ---
 
-### Passo 2 — Subir o LocalStack com Docker
+### 2. Subir o LocalStack no Docker
 
-O LocalStack disponibiliza um endpoint em `http://localhost:4566` que aceita chamadas idênticas às APIs reais da AWS.
+O LocalStack sobe um endpoint em `localhost:4566` que responde igualzinho às APIs da AWS.
 
 ```bash
 $ docker run -d --name localstack \
@@ -129,7 +90,7 @@ $ docker run -d --name localstack \
     localstack/localstack:3.4.0
 ```
 
-**Verificação — container saudável:**
+Pra conferir se subiu certo:
 ```
 $ docker ps
 
@@ -137,17 +98,15 @@ CONTAINER ID   IMAGE                         STATUS                    PORTS    
 64784d1f0543   localstack/localstack:3.4.0   Up (healthy)              0.0.0.0:4566->4566/tcp, ...        localstack
 ```
 
-> **Propósito:** Simular os serviços EC2, S3, IAM e STS da AWS sem custos.
+O `(healthy)` mostra que tá tudo rodando.
 
 ---
 
-### Passo 3 — Criar o arquivo `terraform.tf` (Bloco Terraform)
+### 3. Criar o `terraform.tf`
 
-O bloco `terraform {}` define quais **providers** (plugins) o Terraform deve baixar e qual versão mínima é necessária.
+Esse arquivo configura o Terraform em si — qual provider usar e qual versão mínima aceitar.
 
 ```hcl
-# terraform.tf
-
 terraform {
   required_providers {
     aws = {
@@ -160,12 +119,11 @@ terraform {
 }
 ```
 
-**O que cada campo significa:**
-- `source = "hashicorp/aws"` → Endereço do provider no [Terraform Registry](https://registry.terraform.io/providers/hashicorp/aws)
-- `version = "~> 5.92"` → Aceita versões `>= 5.92` e `< 6.0` (major version travada)
-- `required_version = ">= 1.2"` → Qualquer Terraform >= 1.2 pode executar
+- `source = "hashicorp/aws"` → busca o provider da AWS no [Terraform Registry](https://registry.terraform.io/providers/hashicorp/aws)
+- `version = "~> 5.92"` → aceita qualquer versão 5.x a partir da 5.92
+- `required_version = ">= 1.2"` → precisa do Terraform 1.2 ou mais novo
 
-**Verificação da versão instalada:**
+Pra conferir a versão instalada:
 ```
 $ terraform -version
 
@@ -175,13 +133,11 @@ on linux_amd64
 
 ---
 
-### Passo 4 — Criar o arquivo `main.tf` (Provider + Recurso)
+### 4. Criar o `main.tf`
 
-Este arquivo define o **provider** (como se conectar à AWS) e o **resource** (o que criar).
+Aqui é onde a mágica acontece. Esse arquivo define o **provider** (como se conectar) e o **resource** (o que criar).
 
 ```hcl
-# main.tf
-
 provider "aws" {
   region                      = "us-east-1"
   access_key                  = "test"
@@ -208,38 +164,31 @@ resource "aws_instance" "app_server" {
 }
 ```
 
-**Explicação dos blocos:**
+Sobre cada parte:
+- O bloco `provider` aponta pro LocalStack (`localhost:4566`) com credenciais dummy (`test`/`test`)
+- O `skip_credentials_validation` e os outros `skip_` são necessários porque o LocalStack não valida credenciais como a AWS real faz
+- O `resource "aws_instance"` cria a instância EC2 com a AMI do Ubuntu 24.04 e tipo `t2.micro` (que seria Free Tier na AWS real)
+- A tag `Name = "learn-terraform"` é o nome que aparece no console
 
-| Bloco | O que faz |
-|---|---|
-| `provider "aws"` | Configura a conexão com a AWS. O `endpoints` redireciona para o LocalStack |
-| `access_key / secret_key = "test"` | Credenciais dummy aceitas pelo LocalStack |
-| `skip_credentials_validation` | Desativa a validação de credenciais (necessário para LocalStack) |
-| `resource "aws_instance"` | Define a instância EC2 a ser criada |
-| `ami = "ami-0026a04369a3093cc"` | AMI do Ubuntu 24.04 LTS (Noble Numbat) |
-| `instance_type = "t2.micro"` | 1 vCPU, 1 GiB RAM — elegível ao AWS Free Tier |
-| `tags.Name = "learn-terraform"` | Nome da instância no console |
-
-> **Nota sobre o `data "aws_ami"` do tutorial original:**
-> O tutorial da HashiCorp usa um bloco `data "aws_ami" "ubuntu"` que busca dinamicamente a AMI mais recente do Ubuntu. O LocalStack Community Edition não suporta o filtro de AMIs, por isso usamos o ID da AMI diretamente (`ami-0026a04369a3093cc`), que é o mesmo ID retornado pelo tutorial original. O arquivo `main_aws.tf.example` contém a versão com o `data` block para uso na AWS real.
+**Sobre o bloco `data "aws_ami"` do tutorial original:** o tutorial da HashiCorp usa um `data "aws_ami"` que busca a AMI mais recente do Ubuntu automaticamente. O LocalStack Community não suporta esse filtro, então coloquei o ID da AMI direto (`ami-0026a04369a3093cc` — que é exatamente o ID que o tutorial retorna). O arquivo `main_aws.tf.example` tem a versão com o `data` block pra quem for usar na AWS de verdade.
 
 ---
 
-### Passo 5 — Formatar a configuração (`terraform fmt`)
+### 5. Formatar o código (`terraform fmt`)
 
-O `terraform fmt` reformata todos os arquivos `.tf` segundo o estilo oficial da HashiCorp.
+Reformata os arquivos `.tf` pro padrão da HashiCorp.
 
 ```
 $ terraform fmt
 ```
 
-> Se nenhum arquivo for listado na saída, significa que todos já estavam formatados corretamente.
+Se não imprimiu nada, é porque já tava formatado certo.
 
 ---
 
-### Passo 6 — Inicializar o workspace (`terraform init`)
+### 6. Inicializar o workspace (`terraform init`)
 
-O `terraform init` baixa e instala os plugins dos providers definidos no `terraform.tf`.
+Esse é o primeiro comando que a gente roda. Ele baixa o provider da AWS e prepara o diretório.
 
 ```
 $ terraform init
@@ -265,15 +214,13 @@ rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
 ```
 
-**O que aconteceu:**
-- O Terraform baixou o provider AWS **v5.100.0** e armazenou em `.terraform/`
-- Criou o arquivo `.terraform.lock.hcl` que trava a versão exata do provider
+O Terraform baixou o provider `hashicorp/aws v5.100.0`, guardou na pasta `.terraform/` e criou o `.terraform.lock.hcl` que trava a versão exata pra garantir que todo mundo use a mesma.
 
 ---
 
-### Passo 7 — Validar a configuração (`terraform validate`)
+### 7. Validar a configuração (`terraform validate`)
 
-O `terraform validate` verifica se a sintaxe HCL está correta e se não há referências inválidas.
+Checa se a sintaxe dos arquivos `.tf` tá correta.
 
 ```
 $ terraform validate
@@ -283,9 +230,9 @@ Success! The configuration is valid.
 
 ---
 
-### Passo 8 — Criar a infraestrutura (`terraform apply`)
+### 8. Provisionar a instância (`terraform apply`)
 
-O `terraform apply` primeiro gera um **plano de execução** mostrando o que será criado, e depois aplica as mudanças.
+Esse é o comando que de fato cria os recursos. Ele primeiro mostra o plano (o que vai fazer) e depois aplica.
 
 ```
 $ terraform apply -auto-approve
@@ -339,28 +286,22 @@ aws_instance.app_server: Creation complete after 11s [id=i-ea5b989e35804262b]
 Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 ```
 
-**Resultado:** ✅ Instância EC2 criada com ID `i-ea5b989e35804262b`
-
-**Leitura do output:**
-- O símbolo `+` indica que o recurso será **criado**
-- Valores `(known after apply)` são definidos pela AWS/LocalStack após a criação
-- `Plan: 1 to add` confirma que exatamente 1 recurso será criado
-- `Creation complete after 11s` confirma o provisionamento bem-sucedido
+O `+` do lado de cada atributo significa que vai ser criado. Campos com `(known after apply)` são valores que a AWS/LocalStack define na hora da criação (como IP, ID, etc). O resultado final: **instância criada com sucesso**, ID `i-ea5b989e35804262b`.
 
 ---
 
-### Passo 9 — Inspecionar o estado (`terraform state list` / `terraform show`)
+### 9. Inspecionar o estado (`terraform state list` / `terraform show`)
 
-O Terraform armazena o estado da infraestrutura no arquivo `terraform.tfstate`. Podemos inspecioná-lo:
+Depois do apply, o Terraform salva tudo que criou num arquivo chamado `terraform.tfstate`. Dá pra consultar o que tem lá:
 
-**Listar recursos:**
 ```
 $ terraform state list
 
 aws_instance.app_server
 ```
 
-**Exibir detalhes completos do estado:**
+E pra ver os detalhes completos:
+
 ```
 $ terraform show
 
@@ -407,63 +348,59 @@ resource "aws_instance" "app_server" {
 }
 ```
 
-**O que o `terraform show` confirma:**
-- A instância está em estado **`running`** ✅
-- Recebeu IP privado (`10.236.201.159`) e público (`54.214.40.81`)
-- Foi criada na AZ `us-east-1a` com a tag `Name = "learn-terraform"`
-- Possui um volume EBS root de 8 GB tipo `gp2`
+A instância tá com `instance_state = "running"` — rodando certinho. Recebeu IP privado, IP público, DNS, subnet e tudo mais.
 
 ---
 
-## ☁️ Recursos Provisionados na Nuvem
+## Recursos provisionados
 
-### Instância EC2 (`aws_instance.app_server`)
+Tudo que o Terraform criou, extraído diretamente do `terraform show`:
 
-| Propriedade | Valor |
+### Instância EC2
+
+| Campo | Valor |
 |---|---|
-| **Instance ID** | `i-ea5b989e35804262b` |
-| **AMI** | `ami-0026a04369a3093cc` (Ubuntu 24.04 LTS Noble Numbat) |
-| **Tipo** | `t2.micro` (1 vCPU, 1 GiB RAM — Free Tier) |
-| **Estado** | `running` ✅ |
-| **Região** | `us-east-1` |
-| **Availability Zone** | `us-east-1a` |
-| **IP Privado** | `10.236.201.159` |
-| **IP Público** | `54.214.40.81` |
-| **DNS Privado** | `ip-10-236-201-159.ec2.internal` |
-| **DNS Público** | `ec2-54-214-40-81.compute-1.amazonaws.com` |
-| **Subnet** | `subnet-572b3fbd` |
-| **ARN** | `arn:aws:ec2:us-east-1::instance/i-ea5b989e35804262b` |
+| Instance ID | `i-ea5b989e35804262b` |
+| AMI | `ami-0026a04369a3093cc` (Ubuntu 24.04 LTS) |
+| Tipo | `t2.micro` (1 vCPU, 1 GiB RAM) |
+| Estado | `running` |
+| Região / AZ | `us-east-1` / `us-east-1a` |
+| IP Privado | `10.236.201.159` |
+| IP Público | `54.214.40.81` |
+| DNS Privado | `ip-10-236-201-159.ec2.internal` |
+| DNS Público | `ec2-54-214-40-81.compute-1.amazonaws.com` |
+| Subnet | `subnet-572b3fbd` |
+| ARN | `arn:aws:ec2:us-east-1::instance/i-ea5b989e35804262b` |
+| Tag Name | `learn-terraform` |
 
-### Volume EBS (Root Block Device)
+### Volume EBS (disco)
 
-| Propriedade | Valor |
+| Campo | Valor |
 |---|---|
-| **Volume ID** | `vol-969cceef` |
-| **Device** | `/dev/sda1` |
-| **Tamanho** | 8 GB |
-| **Tipo** | `gp2` (General Purpose SSD) |
-| **Criptografado** | Não |
-| **Delete on Termination** | Sim |
+| Volume ID | `vol-969cceef` |
+| Device | `/dev/sda1` |
+| Tamanho | 8 GB |
+| Tipo | `gp2` (SSD) |
+| Criptografado | Não |
+| Apaga junto com a instância | Sim |
 
-### Interface de Rede
+### Interface de rede
 
-| Propriedade | Valor |
+| Campo | Valor |
 |---|---|
-| **ENI ID** | `eni-a37878d4` |
-| **IP Público associado** | Sim (`54.214.40.81`) |
+| ENI ID | `eni-a37878d4` |
+| Tem IP público | Sim |
 
 ---
 
-## 💣 Destruição da Infraestrutura
+## Destruindo a infra
 
-O `terraform destroy` remove todos os recursos gerenciados. Esta é uma etapa **obrigatória** em ambientes AWS reais para evitar cobranças.
+Pra destruir tudo que foi criado (na AWS real isso evita cobranças):
 
 ```
 $ terraform destroy -auto-approve
 
 aws_instance.app_server: Refreshing state... [id=i-1fbb843bf40238d8c]
-
-Terraform will perform the following actions:
 
   # aws_instance.app_server will be destroyed
   - resource "aws_instance" "app_server" {
@@ -485,82 +422,76 @@ aws_instance.app_server: Destruction complete after 10s
 Destroy complete! Resources: 1 destroyed.
 ```
 
-Para também parar o LocalStack:
+O `-` ao lado de cada atributo mostra que tá sendo **removido**. No final: `1 destroyed`.
+
+Pra parar o LocalStack também:
 ```bash
 $ docker stop localstack && docker rm localstack
 ```
 
 ---
 
-## 🔀 Código para AWS Real vs LocalStack
+## Diferença entre o código local e o da AWS real
 
-O repositório contém dois arquivos de configuração para comparação:
+O repositório tem dois arquivos pra comparar:
 
-### `main.tf` — Versão LocalStack (usada neste projeto)
+**`main.tf`** (o que usei — aponta pro LocalStack):
 ```hcl
 provider "aws" {
   region                      = "us-east-1"
   access_key                  = "test"
   secret_key                  = "test"
   skip_credentials_validation = true
-  skip_metadata_api_check     = true
-  skip_requesting_account_id  = true
-
-  endpoints {
-    ec2 = "http://localhost:4566"
-    iam = "http://localhost:4566"
-    s3  = "http://localhost:4566"
-    sts = "http://localhost:4566"
-  }
+  # ... endpoints apontando pra localhost:4566
 }
 
 resource "aws_instance" "app_server" {
-  ami           = "ami-0026a04369a3093cc"
+  ami           = "ami-0026a04369a3093cc"   # AMI fixa
   instance_type = "t2.micro"
   tags = { Name = "learn-terraform" }
 }
 ```
 
-### `main_aws.tf.example` — Versão AWS Real (tutorial original)
+**`main_aws.tf.example`** (versão original do tutorial pra AWS real):
 ```hcl
 provider "aws" {
   region = "us-west-2"
 }
 
-data "aws_ami" "ubuntu" {
+data "aws_ami" "ubuntu" {        # Busca a AMI mais recente automaticamente
   most_recent = true
   filter {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
   }
-  owners = ["099720109477"] # Canonical
+  owners = ["099720109477"]      # Canonical
 }
 
 resource "aws_instance" "app_server" {
-  ami           = data.aws_ami.ubuntu.id
+  ami           = data.aws_ami.ubuntu.id   # AMI dinâmica
   instance_type = "t2.micro"
   tags = { Name = "learn-terraform" }
 }
 ```
 
-**Diferenças principais:**
+As diferenças na prática:
 
-| Aspecto | LocalStack | AWS Real |
+| | LocalStack | AWS Real |
 |---|---|---|
-| **Endpoints** | `http://localhost:4566` | APIs oficiais da AWS |
-| **Credenciais** | `test`/`test` (dummy) | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` reais |
-| **AMI** | ID hardcoded | `data "aws_ami"` busca dinamicamente |
-| **Região** | `us-east-1` | `us-west-2` (ou qualquer outra) |
-| **Custo** | Gratuito | Free Tier (t2.micro grátis por 12 meses) |
+| Endpoint | `localhost:4566` | APIs oficiais da AWS |
+| Credenciais | `test`/`test` | Access Key + Secret Key reais |
+| AMI | ID fixo no código | `data "aws_ami"` busca a mais recente |
+| Região | `us-east-1` | `us-west-2` (ou qualquer outra) |
+| Custo | Zero | Free Tier (t2.micro grátis por 12 meses) |
 
-> O bloco `data "aws_ami"` do tutorial original não é suportado pelo LocalStack Community, por isso usamos o ID da AMI diretamente. Em produção, o `data` block é a prática recomendada pois mantém a configuração dinâmica.
+O bloco `data "aws_ami"` do tutorial não funciona no LocalStack Community porque ele não tem o catálogo de AMIs da AWS. Por isso hardcodei o ID `ami-0026a04369a3093cc`, que é exatamente o que o tutorial retorna. Na AWS real, o `data` block é a prática recomendada pra não ficar com ID defasado.
 
 ---
 
-## 📚 Referências
+## Referências
 
-- [Tutorial HashiCorp — Create Infrastructure](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-create)
+- [HashiCorp — Create Infrastructure (tutorial seguido)](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-create)
 - [Documentação do Terraform](https://developer.hashicorp.com/terraform/docs)
-- [AWS Provider — Terraform Registry](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [LocalStack — GitHub](https://github.com/localstack/localstack)
+- [AWS Provider no Terraform Registry](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [LocalStack no GitHub](https://github.com/localstack/localstack)
 - [Docker — Get Started](https://docs.docker.com/get-started/)
