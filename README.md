@@ -29,7 +29,7 @@ Antes de mais nada, preciso explicar por que estou usando o LocalStack ao invés
 Fui criar uma conta na AWS do zero, mas na hora de validar o cadastro a AWS pede um cartão de crédito internacional. Fiz o cadastro inteiro, mas a verificação do cartão não completou e a página ficou travada em `portal.aws.amazon.com/billing/signup/incomplete` com a mensagem "Complete your account setup". Sem a validação do cartão, a conta fica bloqueada e não dá pra usar nenhum serviço.
 
 **Tentativa 2 — AWS Academy da faculdade:**
-A faculdade disponibiliza o AWS Academy Learner Lab, que é um ambiente gratuito pra alunos. O problema é que eu esqueci a senha e tentei redefinir, mas o e-mail de recuperação simplesmente nunca chegou. Tentei várias vezes e nada.
+A faculdade disponibiliza o AWS Academy Learner Lab, que é um ambiente gratuito pra alunos. O problema é que eu esqueci a senha e tentei redefinir, mas o e-mail de recuperação simplesmente nunca chega. Tentei várias vezes e nada.
 
 **A solução — LocalStack:**
 O LocalStack é uma ferramenta open-source que roda no Docker e simula os serviços da AWS localmente. É bastante usado no mercado pra testes de infraestrutura antes de aplicar na nuvem de verdade. O fluxo do Terraform funciona igualzinho — mesmos comandos, mesmas saídas. A única diferença é que as chamadas de API vão pra `localhost:4566` ao invés dos servidores da AWS.
