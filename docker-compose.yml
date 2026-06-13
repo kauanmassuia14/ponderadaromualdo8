@@ -1,0 +1,19 @@
+# docker-compose.yml
+# Sobe o LocalStack para emular os serviços AWS localmente.
+# Uso: docker compose up -d
+
+version: "3.8"
+
+services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack:3.4.0
+    ports:
+      - "4566:4566"            # Gateway principal de todos os serviços
+      - "4510-4559:4510-4559"  # Portas para serviços individuais
+    environment:
+      - SERVICES=ec2,s3,iam,sts
+      - DEBUG=0
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
